@@ -39,7 +39,7 @@ type UsersDetailsDBModule interface {
 	GetUserDetails(ctx context.Context, realm string, userID string) (dto.DBUser, error)
 	DeleteUserDetails(ctx context.Context, realm string, userID string) error
 	CreateCheck(ctx context.Context, realm string, userID string, check dto.DBCheck) error
-	GetChecks(ctx context.Context, realm string, userID string) ([]dto.DBCheck, error)
+	GetChecks(ctx context.Context, realm, userID string, proofContent bool) ([]dto.DBCheck, error)
 }
 
 type usersDBModule struct {
@@ -144,7 +144,7 @@ func (c *usersDBModule) CreateCheck(ctx context.Context, realm string, userID st
 	return err
 }
 
-func (c *usersDBModule) GetChecks(ctx context.Context, realm string, userID string) ([]dto.DBCheck, error) {
+func (c *usersDBModule) GetChecks(ctx context.Context, realm, userID string, proofContent bool) ([]dto.DBCheck, error) {
 	var rows, err = c.db.Query(selectCheckStmt, realm, userID)
 
 	if err != nil {
@@ -165,15 +165,17 @@ func (c *usersDBModule) GetChecks(ctx context.Context, realm string, userID stri
 			return nil, err
 		}
 
-		var proofData []byte
+		var proofData *[]byte
 
-		if len(encryptedProofData) != 0 {
+		if proofContent && len(encryptedProofData) != 0 {
+			var bytes []byte = encryptedProofData
 			//decrypt the proof data of the user
-			proofData, err = c.cipher.Decrypt(encryptedProofData, []byte(userID))
+			/*bytes, err = c.cipher.Decrypt(encryptedProofData, []byte(userID))
 			if err != nil {
 				c.logger.Warn(ctx, "msg", "Can't decrypt the proof data", "error", err.Error(), "realmID", realm, "userID", userID)
 				return nil, err
-			}
+			}*/
+			proofData = &bytes
 		}
 
 		result = append(result, dto.DBCheck{
@@ -182,7 +184,7 @@ func (c *usersDBModule) GetChecks(ctx context.Context, realm string, userID stri
 			Status:    nullStringToPtr(status),
 			Type:      nullStringToPtr(checkType),
 			Nature:    nullStringToPtr(nature),
-			ProofData: &proofData,
+			ProofData: proofData,
 			ProofType: nullStringToPtr(proofType),
 			Comment:   nullStringToPtr(comment),
 		})

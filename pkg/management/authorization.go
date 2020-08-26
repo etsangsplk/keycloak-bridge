@@ -4,6 +4,7 @@ import (
 	"context"
 
 	cs "github.com/cloudtrust/common-service"
+	commonhttp "github.com/cloudtrust/common-service/http"
 	"github.com/cloudtrust/common-service/log"
 	"github.com/cloudtrust/common-service/security"
 	api "github.com/cloudtrust/keycloak-bridge/api/management"
@@ -190,6 +191,10 @@ func (c *authorizationComponentMW) GetUser(ctx context.Context, realmName, userI
 	}
 
 	return c.next.GetUser(ctx, realmName, userID)
+}
+
+func (c *authorizationComponentMW) GetUserProof(ctx context.Context, realmName, userID string) (commonhttp.MimeContent, error) {
+	return c.next.GetUserProof(ctx, realmName, userID)
 }
 
 func (c *authorizationComponentMW) UpdateUser(ctx context.Context, realmName, userID string, user api.UserRepresentation) error {

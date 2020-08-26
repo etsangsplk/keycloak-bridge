@@ -10,6 +10,7 @@ import (
 	"github.com/cloudtrust/common-service/configuration"
 	"github.com/cloudtrust/common-service/database"
 	errorhandler "github.com/cloudtrust/common-service/errors"
+	commonhttp "github.com/cloudtrust/common-service/http"
 	api "github.com/cloudtrust/keycloak-bridge/api/management"
 	"github.com/cloudtrust/keycloak-bridge/internal/constants"
 	"github.com/cloudtrust/keycloak-bridge/internal/dto"
@@ -71,6 +72,7 @@ type UsersDetailsDBModule interface {
 	StoreOrUpdateUserDetails(ctx context.Context, realm string, user dto.DBUser) error
 	GetUserDetails(ctx context.Context, realm string, userID string) (dto.DBUser, error)
 	DeleteUserDetails(ctx context.Context, realm string, userID string) error
+	GetChecks(ctx context.Context, realm string, userID string, proofContent bool) ([]dto.DBCheck, error)
 }
 
 // Component is the management component interface.
@@ -85,6 +87,7 @@ type Component interface {
 
 	DeleteUser(ctx context.Context, realmName, userID string) error
 	GetUser(ctx context.Context, realmName, userID string) (api.UserRepresentation, error)
+	GetUserProof(ctx context.Context, realmName, userID string) (commonhttp.MimeContent, error)
 	UpdateUser(ctx context.Context, realmName, userID string, user api.UserRepresentation) error
 	GetUsers(ctx context.Context, realmName string, groupIDs []string, paramKV ...string) (api.UsersPageRepresentation, error)
 	CreateUser(ctx context.Context, realmName string, user api.UserRepresentation) (string, error)
@@ -387,6 +390,22 @@ func (c *component) GetUser(ctx context.Context, realmName, userID string) (api.
 	c.reportEvent(ctx, "GET_DETAILS", database.CtEventRealmName, realmName, database.CtEventUserID, userID, database.CtEventUsername, username)
 
 	return userRep, nil
+}
+
+func (c *component) GetUserProof(ctx context.Context, realmName, userID string) (commonhttp.MimeContent, error) {
+	var checks, err = c.usersDBModule.GetChecks(ctx, realmName, userID, true)
+	if err != nil {
+		return commonhttp.MimeContent{}, err
+	}
+	if len(checks) == 0 {
+		return commonhttp.MimeContent{}, errorhandler.CreateNotFoundError("check")
+	}
+	var idx = 0 //len(checks) - 1
+	return commonhttp.MimeContent{
+		MimeType: "application/octet-stream",
+		Content:  *checks[idx].ProofData,
+		Filename: "proof.bin",
+	}, nil
 }
 
 func (c *component) isUpdated(newValue, oldValue *string) bool {

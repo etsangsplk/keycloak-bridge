@@ -124,14 +124,14 @@ func TestGetUserInformation(t *testing.T) {
 	t.Run("Unexpected error", func(t *testing.T) {
 		mockDB.EXPECT().Query(gomock.Any(), realm, userID).Return(mockSQLRows, unexpectedError)
 
-		var _, err = usersDBModule.GetChecks(ctx, realm, userID)
+		var _, err = usersDBModule.GetChecks(ctx, realm, userID, false)
 		assert.Equal(t, unexpectedError, err)
 	})
 
 	t.Run("No row", func(t *testing.T) {
 		mockDB.EXPECT().Query(gomock.Any(), realm, userID).Return(mockSQLRows, sql.ErrNoRows)
 
-		var checks, err = usersDBModule.GetChecks(ctx, realm, userID)
+		var checks, err = usersDBModule.GetChecks(ctx, realm, userID, true)
 		assert.Nil(t, err)
 		assert.Nil(t, checks)
 	})
@@ -141,7 +141,7 @@ func TestGetUserInformation(t *testing.T) {
 		mockSQLRows.EXPECT().Next().Return(true)
 		mockSQLRows.EXPECT().Scan(gomock.Any()).Return(unexpectedError)
 
-		var _, err = usersDBModule.GetChecks(ctx, realm, userID)
+		var _, err = usersDBModule.GetChecks(ctx, realm, userID, true)
 		assert.Equal(t, unexpectedError, err)
 	})
 
@@ -156,7 +156,7 @@ func TestGetUserInformation(t *testing.T) {
 			mockCrypter.EXPECT().Decrypt(gomock.Any(), gomock.Any()).Return(nil, unexpectedError),
 		)
 
-		var _, err = usersDBModule.GetChecks(ctx, realm, userID)
+		var _, err = usersDBModule.GetChecks(ctx, realm, userID, true)
 		assert.Equal(t, unexpectedError, err)
 	})
 
@@ -174,7 +174,7 @@ func TestGetUserInformation(t *testing.T) {
 			mockSQLRows.EXPECT().Next().Return(false),
 		)
 
-		var checks, err = usersDBModule.GetChecks(ctx, realm, userID)
+		var checks, err = usersDBModule.GetChecks(ctx, realm, userID, true)
 		assert.Nil(t, err)
 		assert.Len(t, checks, 1)
 		assert.Equal(t, natureValue, *checks[0].Nature)
@@ -197,7 +197,7 @@ func TestGetUserInformation(t *testing.T) {
 			mockSQLRows.EXPECT().Next().Return(false),
 		)
 
-		var checks, err = usersDBModule.GetChecks(ctx, realm, userID)
+		var checks, err = usersDBModule.GetChecks(ctx, realm, userID, true)
 		assert.Nil(t, err)
 		assert.Len(t, checks, 1)
 		assert.Equal(t, natureValue, *checks[0].Nature)
